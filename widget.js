@@ -30,6 +30,9 @@
 
   var params = new URLSearchParams(window.location.search);
   var PREVIEW = params.get('preview') === '1';
+  // Built into our own form (form-mockup/, David 11-03): the form sets its host here BEFORE this script
+  // runs, puts this widget's markup on its page, then calls host.boot(). No frame, no Jotform.
+  var NATIVE = (window.QuoteNative && window.QuoteNative.ancillary) || null;
   var READ_TIMEOUT_MS = 3000;
   var IDI_REQUEST = 'IDI-REQUEST';
   var OUTSIDE_HEAD = 'outside-head'; // the plan list's divider (a data-plan no plan id takes)
@@ -396,10 +399,19 @@
     });
 
     try {
-      bridge = window.WidgetBridge.create({ preview: PREVIEW, readTimeoutMs: READ_TIMEOUT_MS, debug: debug_ });
+      bridge = window.WidgetBridge.create({ preview: PREVIEW, host: NATIVE, readTimeoutMs: READ_TIMEOUT_MS, debug: debug_ });
     } catch (err) {
       showMessages_(el.errors, ['This price tool could not start. ' + err.message]);
       return;
+    }
+    if (NATIVE) {
+      // The form's own Census step is the one place to pick the file: it hands it over (host.readCensus).
+      el.censusFile.hidden = true;
+      Array.prototype.forEach.call(el.census.querySelectorAll('.qw-census-template'), function (n) { n.hidden = true; });
+      var intro = el.census.querySelector('.qw-note-top');
+      if (intro) intro.textContent = 'From the census you uploaded on the Census step, read here in your browser: it answers ' +
+        'most of the questions below. Only counts are kept. You can change any answer it fills.';
+      NATIVE.readCensus = readCensusFile_;
     }
 
     bridge.start(function (ready) {
@@ -583,6 +595,12 @@
     // The date comes from the form only when the widget was told its question; else it is typed.
     el.date.readOnly = mode === 'form' && !!state.fieldIds.effectiveDate;
     el.refresh.hidden = ![state.fieldIds.groupSize, state.fieldIds.zip, state.fieldIds.sic].every(Boolean);
+    if (NATIVE) {
+      // Inside our own form the answers sit on its earlier steps and are re-read each time this one opens:
+      // no echo of them here and no Refresh. The boxes stay (hidden): the prices read them.
+      el.size.closest('.qw-inputs').hidden = mode === 'form';
+      if (mode === 'form' && /^From your answers/.test(note)) note = '';
+    }
     el.note.textContent = note;
   }
 
@@ -1514,6 +1532,11 @@
     var file = el.censusFile.files && el.censusFile.files[0];
     if (!file) return;
     el.censusFile.value = '';
+    readCensusFile_(file);
+  }
+
+  /** Reads one census file (the picker above, or our own form's Census step: host.readCensus). */
+  function readCensusFile_(file) {
     var asOf = (state.quote && state.quote.ok && state.quote.inputs.effectiveDate) || '';
     // The form's size: the shares are of it when the census lists only the employees enrolling (CensusReader.basis).
     var size = (state.quote && state.quote.ok && state.quote.inputs.groupSize) || 0;
@@ -1657,7 +1680,8 @@
         recompute_();
       });
       p.appendChild(btn);
-      p.appendChild(node_('p', 'qw-hint', 'If not, correct the company size on the form\'s first page, then press Refresh above.'));
+      // Not "the first page": on the Proposal form the size is on page 2 (found 11-03), and the own-form mock-up moves it.
+      p.appendChild(node_('p', 'qw-hint', 'If not, correct the company size earlier in the form, then press Refresh above.'));
     }
     box.appendChild(p);
   }
@@ -1673,8 +1697,8 @@
     }
     if (!b.confirm || c.confirmed === b.eligible) return [];
     return ['Confirm the number of eligible employees in the census section (' + (b.listed !== b.eligible ? 'the census lists ' +
-      b.listed + '; the company size says ' + b.eligible : 'the census shows no enrollment') + '), or correct the company size on ' +
-      'the form\'s first page.'];
+      b.listed + '; the company size says ' + b.eligible : 'the census shows no enrollment') + '), or correct the company size ' +
+      'earlier in the form.'];
   }
 
   /** What the census section shows: what was read, and the rows to check (screen only). */
@@ -2684,6 +2708,7 @@
   }
 
   function watchHeight_() {
+    if (NATIVE) return; // in the form's own page: no frame to size
     var last = 0;
     // The body's own height, never documentElement.scrollHeight: that one is at least the
     // frame's height, so every resize would feed the next and the frame only ever grows.
@@ -2701,6 +2726,7 @@
   // On the real form loadPrivateRates_ calls straight through, so Jotform's "ready" is still
   // subscribed during the first run.
   var start = function () { loadPrivateRates_(boot_); };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
+  if (NATIVE) NATIVE.boot = start; // the form starts it once this widget's markup is on its page
+  else if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);
   else start();
 })();

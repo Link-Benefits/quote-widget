@@ -22,6 +22,9 @@
 
   var params = new URLSearchParams(window.location.search);
   var PREVIEW = params.get('preview') === '1';
+  // Built into our own form (form-mockup/, David 11-03): as in widget.js, the form sets this host first,
+  // puts the markup on its page, then calls host.boot().
+  var NATIVE = (window.QuoteNative && window.QuoteNative.medical) || null;
   var READ_TIMEOUT_MS = 3000;
   var M = window.MedicalMenu.create(window.PH_SG_MENU, window.MI_ZIP_COUNTY);
 
@@ -79,7 +82,7 @@
         el[id.replace(/-(\w)/g, function (m, c) { return c.toUpperCase(); })] = document.getElementById('qm-' + id);
       });
     try {
-      bridge = window.WidgetBridge.create({ preview: PREVIEW, readTimeoutMs: READ_TIMEOUT_MS, debug: debug_ });
+      bridge = window.WidgetBridge.create({ preview: PREVIEW, host: NATIVE, readTimeoutMs: READ_TIMEOUT_MS, debug: debug_ });
     } catch (err) {
       showMessages_(el.errors, ['This plan picker could not start. ' + err.message]);
       return;
@@ -152,6 +155,10 @@
     el.date.readOnly = mode === 'form' && !!state.fieldIds.effectiveDate;
     el.zip.readOnly = mode === 'form' && !!state.fieldIds.zip;
     el.refresh.hidden = !(state.fieldIds.effectiveDate || state.fieldIds.zip);
+    if (NATIVE) { // as in widget.js: no echo of the form's own answers, no Refresh (the boxes stay, hidden)
+      el.date.closest('.qw-inputs').hidden = mode === 'form';
+      if (mode === 'form' && /^From your answers/.test(note)) note = '';
+    }
     el.note.textContent = note;
   }
 
@@ -564,6 +571,7 @@
   }
 
   function watchHeight_() {
+    if (NATIVE) return; // in the form's own page: no frame to size
     var last = 0;
     // The body's own height, never documentElement.scrollHeight (that one only ever grows).
     var send = function () {
@@ -577,6 +585,7 @@
     send();
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot_);
+  if (NATIVE) NATIVE.boot = boot_; // the form starts it once this widget's markup is on its page
+  else if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot_);
   else boot_();
 })();

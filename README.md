@@ -4,7 +4,7 @@ Static files GitHub Pages serves to Link Benefits' Jotform forms:
 
 - `index.html`: the ancillary quote widget
 - `medical.html`: the small group medical widget
-- `census-template.xlsx`: the census template the ancillary widget links to
+- `census-template-small-group.xlsx`, `census-template-large-group.xlsx`: Link's census templates
 
 **Do not edit here.** Every publish overwrites this repo from Link Benefits' private source (`Jotform quote widget/tools/publish-widget.js`); each commit names the source commit.
 

@@ -2,8 +2,8 @@
  * The link between a widget and its form, shared by the ancillary widget (widget.js) and the
  * medical widget (medical.js), so the live probe pins Jotform's reply shape in ONE place.
  *
- *   WidgetBridge.create({ preview, readTimeoutMs, debug }) -> bridge
- *     mode                 'jotform' | 'preview'
+ *   WidgetBridge.create({ preview, host, readTimeoutMs, debug }) -> bridge
+ *     mode                 'jotform' | 'preview' | 'native' (host given: the widget runs inside our own form's page)
  *     start(onReady)       onReady({ value }): the form is ready (value = an earlier answer)
  *     setting(name, dflt)  a widget setting (Jotform: the widget's wand; preview: the host page)
  *     readFields(ids, cb)  cb({ <id>: <string> }) or cb(null) when the form gives no answer
@@ -16,16 +16,19 @@
  * the reply shape is unknown until the live probe, so every raw reply goes to debug() and is
  * read by field-values.js. A read with no answer in readTimeoutMs gives null, and the widget
  * lets the visitor type the answers instead. The preview (?preview=1) is the local page in
- * preview/, which answers in a GUESSED Jotform shape through window.parent.QuotePreview.
+ * preview/, which answers in a GUESSED Jotform shape through window.parent.QuotePreview. Built into
+ * our own form (form-mockup/), the host is handed over directly (create({ host })), same API.
  */
 (function (root) {
   'use strict';
 
-  function previewBridge_(o) {
-    var host = root.parent && root.parent.QuotePreview;
+  function previewBridge_(o, given, mode) {
+    // `given`: our own form runs the widget IN its page (form-mockup/, David 11-03: "switch the mock-up to
+    // built-in widgets") and hands the host over directly. Otherwise the local preview page around the frame.
+    var host = given || (root.parent && root.parent.QuotePreview);
     if (!host) throw new Error('preview=1 but no QuotePreview on the parent page');
     return {
-      mode: 'preview',
+      mode: mode || 'preview',
       start: function (onReady) { onReady({ value: host.initialValue || '' }); },
       setting: function (name, dflt) {
         var v = host.settings[name];
@@ -40,7 +43,7 @@
       writeField: function (id, value) { host.writeField(id, value); },
       sendValue: function (value) { host.receiveValue(value); },
       onSubmit: function (fn) { host.onSubmit = fn; },
-      onShow: function () {},
+      onShow: function (fn) { host.onShow = fn; }, // our own form calls it each time the widget's step opens
       resize: function (h) { host.resize(h); }
     };
   }
@@ -97,6 +100,7 @@
 
   function create(opts) {
     var o = { readTimeoutMs: opts.readTimeoutMs || 3000, debug: opts.debug || function () {} };
+    if (opts.host) return previewBridge_(o, opts.host, 'native');
     return opts.preview ? previewBridge_(o) : jotformBridge_(o);
   }
 
