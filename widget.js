@@ -1601,7 +1601,8 @@
       // Life and disability (David 11-03): a column saying who enrolls answers the line's minimum
       // questions (minContrib / minVol), at each priced carrier's own minimum (its askMinimums). The
       // question still shows only while a design uses it; carriers that would disagree leave it asked.
-      if (f.lines[line].source !== 'election') return;
+      // A line the census only ASSUMES (no enrollment column: CensusReader.derive) has no facts.lines entry.
+      if (!f.lines[line] || f.lines[line].source !== 'election') return;
       minimumFills_(line, dl, d.basis.eligible).forEach(function (m) { put(m.key, m.value, m.detail); });
     });
     state.censusFilled = filled;
