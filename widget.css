@@ -292,6 +292,25 @@ body {
 }
 .qw-ask-num:focus { outline: 2px solid var(--green); outline-offset: 1px; }
 .qw-ask-hint { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
+/* The medical widget's plan search (David 11-03: "can we make the search box match style better?"): a full-width box
+   with a magnifier, in the widget's own input style, the hint under it. */
+.qm-search { display: flex; flex-direction: column; margin: 2px 0 14px; }
+.qm-search input {
+  width: 100%;
+  max-width: 560px;
+  box-sizing: border-box;
+  font: 15px/1.4 Lato, system-ui, sans-serif;
+  color: var(--text);
+  padding: 10px 12px 10px 38px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='M20 20l-4-4'/%3E%3C/svg%3E") no-repeat 14px center;
+  transition: border-color .15s, box-shadow .15s;
+}
+.qm-search input::placeholder { color: #94a3b8; }
+.qm-search input:hover { border-color: #b7c4cf; }
+.qm-search input:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 3px var(--green-soft); }
+.qm-search .qw-ask-hint { margin-top: 5px; }
 /* PREVIEW ONLY (widget.js formTag_): the Jotform question an answer is read from. Same blue as .qw-real. */
 .qw-formtag {
   display: inline-block;

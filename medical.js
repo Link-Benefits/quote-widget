@@ -91,7 +91,9 @@
       state.debug = bridge.setting('debug', '') === 'on';
       el.debug.hidden = !state.debug;
       debug_('ready (' + bridge.mode + ')', ready);
-      state.fieldIds = { effectiveDate: bridge.setting('effectiveDateField', ''), zip: bridge.setting('zipField', '') };
+      // countyField: a form that already asked the county of a border ZIP (our own form, David 11-03) answers it here.
+      state.fieldIds = { effectiveDate: bridge.setting('effectiveDateField', ''), zip: bridge.setting('zipField', ''),
+        county: bridge.setting('countyField', '') };
       state.summaryField = bridge.setting('summaryField', '');
       if (ready && ready.value) { // a visitor editing a submission
         var earlier = M.parse(ready.value);
@@ -131,7 +133,7 @@
   /** The effective date and the ZIP from the form; typed by the visitor when the form gives no answer. */
   function readFromForm_() {
     var f = state.fieldIds;
-    var ids = [f.effectiveDate, f.zip].filter(Boolean);
+    var ids = [f.effectiveDate, f.zip, f.county].filter(Boolean);
     if (!ids.length) {
       setMode_('typed', 'Enter the effective date and the business ZIP code.');
       update_();
@@ -146,6 +148,8 @@
       }
       if (f.effectiveDate) el.date.value = values[f.effectiveDate] || '';
       if (f.zip) el.zip.value = values[f.zip] || '';
+      // The form's county counts only if it is one of this ZIP's counties (update_ checks it against the place).
+      if (f.county && values[f.county]) state.pickedCounty = values[f.county];
       setMode_('form', 'From your answers above. Changed one? Press Refresh.');
       update_();
     });
